@@ -1,0 +1,12 @@
+.sync*
+/build
+/Binaries
+/DerivedDataCache
+/Intermediate
+/Saved
+*.sdf
+*.opensdf
+*.sln
+*.xcodeproj
+*.suo
+*.DotSettings

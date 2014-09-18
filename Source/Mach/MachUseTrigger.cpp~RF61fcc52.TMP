@@ -1,0 +1,44 @@
+#include "Mach.h"
+#include "MachUseTrigger.h"
+#include "MachCharacter.h"
+
+
+AMachUseTrigger::AMachUseTrigger(const class FPostConstructInitializeProperties& PCIP)
+	: Super(PCIP)
+{
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	bInUse = false;
+}
+
+void AMachUseTrigger::OnBeginOverlap(AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+
+	AMachCharacter* Character = Cast<AMachCharacter>(OtherActor);
+	if (OtherActor && OtherActor != this && OtherComp && Character)
+	{
+		CharactersInTrigger.AddUnique(Character);
+	}
+}
+
+void AMachUseTrigger::OnEndOverlap(AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	AMachCharacter* Character = Cast<AMachCharacter>(OtherActor);
+	if (OtherActor && OtherActor != this && OtherComp && Character)
+	{
+		CharactersInTrigger.Remove(Character);
+	}
+}
+
+void AMachUseTrigger::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+}
+
+void AMachUseTrigger::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMachUseTrigger, bInUse);
+	DOREPLIFETIME(AMachUseTrigger, NumUsers);
+}

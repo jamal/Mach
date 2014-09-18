@@ -1,0 +1,32 @@
+// Copyright 1998-2014 Epic Games, Inc. All Rights Reserved.
+
+#include "Mach.h"
+#include "MachGameMode.h"
+#include "MachHUD.h"
+#include "MachPlayerState.h"
+#include "MachGameState.h"
+
+AMachGameMode::AMachGameMode(const class FPostConstructInitializeProperties& PCIP)
+	: Super(PCIP)
+{
+	// set default pawn class to our Blueprinted character
+	static ConstructorHelpers::FObjectFinder<UBlueprint> PlayerPawnObject(TEXT("/Game/Blueprints/MyCharacter"));
+	if (PlayerPawnObject.Object != NULL)
+	{
+		DefaultPawnClass = (UClass*) PlayerPawnObject.Object->GeneratedClass;
+	}
+
+	HUDClass = AMachHUD::StaticClass();
+	PlayerStateClass = AMachPlayerState::StaticClass();
+	GameStateClass = AMachGameState::StaticClass();
+
+	bDelayedStart = false;
+
+	SetTickableWhenPaused(true);
+}
+
+void AMachGameMode::StartNewPlayer(APlayerController* NewPlayer)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Spawning new player"));
+	Super::StartNewPlayer(NewPlayer);
+}
