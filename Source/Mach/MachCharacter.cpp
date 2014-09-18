@@ -248,6 +248,10 @@ void AMachCharacter::OnStartUse()
 	{
 		ServerOnStartUse();
 	}
+	else
+	{
+		bIsUsePressed = true;
+	}
 }
 
 void AMachCharacter::OnStopUse()
@@ -255,6 +259,10 @@ void AMachCharacter::OnStopUse()
 	if (Role < ROLE_Authority)
 	{
 		ServerOnStopUse();
+	}
+	else
+	{
+		bIsUsePressed = false;
 	}
 }
 
@@ -265,7 +273,7 @@ bool AMachCharacter::ServerOnStartUse_Validate()
 
 void AMachCharacter::ServerOnStartUse_Implementation()
 {
-	bIsUsePressed = true;
+	OnStartUse();
 }
 
 bool AMachCharacter::ServerOnStopUse_Validate()
@@ -275,7 +283,7 @@ bool AMachCharacter::ServerOnStopUse_Validate()
 
 void AMachCharacter::ServerOnStopUse_Implementation()
 {
-	bIsUsePressed = false;
+	OnStopUse();
 }
 
 void AMachCharacter::OnDeath()

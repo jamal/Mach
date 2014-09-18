@@ -15,7 +15,6 @@ AMachTechPoint::AMachTechPoint(const class FPostConstructInitializeProperties& P
 	ResearchTime = 40.f;
 	ResetTime = 10.f;
 	Progress = 0.f;
-	TimeToReset = 0.f;
 	bIsCaptured = false;
 	Team = ETeam::None;
 	LightIntensity = 20000.f;
@@ -78,8 +77,9 @@ void AMachTechPoint::Tick(float DeltaSeconds)
 			{
 				ResetCapture();
 			}
+			
+			GetWorldTimerManager().SetTimer(this, &AMachTechPoint::ResetCapture, ResetTime, false);
 
-			TimeToReset = 0.f;
 			CapturingTeam = TeamInTrigger;
 			float Multiplier = (NumUsers < MaxUsers) ? NumUsers : MaxUsers;
 			Progress += (DeltaSeconds / CaptureTime) * 100 * Multiplier;
@@ -93,18 +93,11 @@ void AMachTechPoint::Tick(float DeltaSeconds)
 			}
 		}
 	}
-	else if (Role == ROLE_Authority && !bInUse && Progress > 0.f && !bIsCaptured)
-	{
-		TimeToReset += DeltaSeconds;
-		if (TimeToReset >= ResetTime)
-		{
-			ResetCapture();
-		}
-	}
 }
 
 void AMachTechPoint::Capture(ETeam::Type CapturedByTeam)
 {
+	FLinearColor LightColor = FLinearColor::White;
 	if (bIsCaptured && Team != CapturedByTeam)
 	{
 		// Reset the status to neutral, and continue
@@ -123,23 +116,31 @@ void AMachTechPoint::Capture(ETeam::Type CapturedByTeam)
 		switch (CapturedByTeam)
 		{
 		case ETeam::A:
+			LightColor = FLinearColor::Red;
 			UE_LOG(LogTemp, Warning, TEXT("Tech point was captured by team A"));
 			break;
 		case ETeam::B:
+			LightColor = FLinearColor::Blue;
 			UE_LOG(LogTemp, Warning, TEXT("Tech point was captured by team B")); 
 			break;
 		}
+	}
 
-		
+	if (PointLight1 != NULL)
+	{
+		PointLight1->Intensity = LightIntensity;
+		PointLight1->SetLightColor(LightColor);
 	}
 }
 
 void AMachTechPoint::ResetCapture()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Reset capture tech point"));
-
-	TimeToReset = 0.f;
-	Progress = 0.f;
+	if (Role == ROLE_Authority && Progress > 0.f)
+	{
+		Progress = 0.f;
+		PointLight1->Intensity = LightIntensity;
+		GetWorld()->Scene->UpdateLightColorAndBrightness(PointLight1);
+	}
 }
 
 void AMachTechPoint::OnRep_Team()
@@ -147,7 +148,6 @@ void AMachTechPoint::OnRep_Team()
 	if (PointLight1 != NULL)
 	{
 		PointLight1->Intensity = LightIntensity;
-		GetWorld()->Scene->UpdateLightColorAndBrightness(PointLight1);
 
 		switch (Team)
 		{
