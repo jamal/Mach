@@ -10,12 +10,6 @@
 			"LoadingPhase": "Default"
 		}
 	],
-	"Plugins": [
-		{
-			"Name": "GitSourceControl",
-			"Enabled": true
-		}
-	],
 	"TargetPlatforms": [
 		"WindowsNoEditor"
 	]
