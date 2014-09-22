@@ -22,4 +22,5 @@ private:
 	void DrawNetMode();
 	void DrawPlayerTeam();
 	void DrawPlayerHealth();
+	void DrawGameOver();
 };

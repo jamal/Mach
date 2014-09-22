@@ -8,7 +8,7 @@
 AMachGameState::AMachGameState(const class FPostConstructInitializeProperties& PCIP)
 	: Super(PCIP)
 {
-
+	WinningTeam = ETeam::None;
 }
 
 TArray<APlayerState*> AMachGameState::GetAllPlayers()
@@ -29,4 +29,11 @@ TArray<APlayerState*> AMachGameState::GetPlayers(ETeam::Type Team)
 	}
 
 	return TeamPlayers;
+}
+
+void AMachGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMachGameState, WinningTeam);
 }

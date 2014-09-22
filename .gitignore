@@ -1,6 +1,4 @@
 .sync*
-/build
-/Binaries
 /DerivedDataCache
 /Intermediate
 /Saved
@@ -10,3 +8,6 @@
 *.xcodeproj
 *.suo
 *.DotSettings
+*.pdb
+*.TMP
+*.log

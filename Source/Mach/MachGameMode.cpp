@@ -7,6 +7,8 @@
 #include "MachGameState.h"
 #include "MachCharacter.h"
 #include "MachPlayerStart.h"
+#include "MachTeamSpawn.h"
+
 
 AMachGameMode::AMachGameMode(const class FPostConstructInitializeProperties& PCIP)
 	: Super(PCIP)
@@ -42,6 +44,83 @@ bool AMachGameMode::IsFriendlyFireEnabled()
 float AMachGameMode::GetFriendlyFireDamagePercent()
 {
 	return FriendlyFireDamagePercent;
+}
+
+bool AMachGameMode::DamageIsFriendly(const AActor* Causer, const AActor* Receiver) const
+{
+	const AMachCharacter* CauserCharacter = Cast<const AMachCharacter>(Causer);
+	if (!CauserCharacter)
+	{
+		return false;
+	}
+	
+	AMachPlayerState* CauserPlayerState = Cast<AMachPlayerState>(CauserCharacter->PlayerState);
+	if (!CauserPlayerState)
+	{
+		return false;
+	}
+
+	// Damage against a player
+	const AMachCharacter* ReceiverCharacter = Cast<const AMachCharacter>(Receiver);
+	if (ReceiverCharacter)
+	{
+		AMachPlayerState* ReceiverPlayerState = Cast<AMachPlayerState>(ReceiverCharacter->PlayerState);
+		if (ReceiverPlayerState && CauserPlayerState->Team == ReceiverPlayerState->Team)
+		{
+			return true;
+		}
+	}
+	
+	// Damage against a spawn
+	const AMachTeamSpawn* TeamSpawn = Cast<const AMachTeamSpawn>(Receiver);
+	if (TeamSpawn && CauserPlayerState->Team == TeamSpawn->Team)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+bool AMachGameMode::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, const AActor* Causer, const AActor* Receiver) const
+{
+	if (Damage == 0.f || !Receiver->bCanBeDamaged || !GameState->IsMatchInProgress())
+	{
+		return false;
+	}
+
+	const AMachCharacter* ReceiverCharacter = Cast<const AMachCharacter>(Receiver);
+	if (ReceiverCharacter && ReceiverCharacter->Health == 0.f)
+	{
+		return false;
+	}
+
+	if (!bFriendlyFire && DamageIsFriendly(Causer, Receiver))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+float AMachGameMode::DamageAmount(float Damage, const AActor* Causer, const AActor* Receiver) const
+{
+	if (bFriendlyFire && FriendlyFireDamagePercent < 1.f && DamageIsFriendly(Causer, Receiver))
+	{
+		return Damage * FriendlyFireDamagePercent;
+	}
+
+	return Damage;
+}
+
+void AMachGameMode::GameOver(ETeam::Type WinningTeam)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Game is now over"));
+	SetMatchState(MatchState::WaitingPostMatch);
+	AMachGameState* State = Cast<AMachGameState>(GameState);
+	if (State)
+	{
+		State->WinningTeam = WinningTeam;
+	}
 }
 
 APlayerController* AMachGameMode::Login(UPlayer* NewPlayer, const FString& Portal, const FString& Options, const TSharedPtr<FUniqueNetId>& UniqueId, FString& ErrorMessage)

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "MachWeapon.h"
+#include "MachGameState.h"
 #include "MachCharacter.generated.h"
 
 UCLASS(config=Game)
@@ -91,6 +92,8 @@ class AMachCharacter : public ACharacter
 
 	bool IsUsePressed();
 
+	ETeam::Type GetTeam();
+
 protected:
 
 	/** Character is trying to "use" an object (use key is pressed) */
@@ -140,7 +143,7 @@ protected:
 	void OnDeath();
 
 	bool ShouldTakeDamage(float Damage, FDamageEvent const & DamageEvent, AController * EventInstigator, AActor * DamageCauser) const;
-	void ReceiveAnyDamage(float Damage, const class UDamageType * DamageType, class AController * InstigatedBy, class AActor * DamageCauser);
+	void ReceiveAnyDamage(float Damage, const class UDamageType * DamageType, class AController * EventInstigator, class AActor * DamageCauser);
 	void RegenerateShield();
 
 protected:

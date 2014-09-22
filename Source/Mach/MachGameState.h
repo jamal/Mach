@@ -23,6 +23,9 @@ class AMachGameState : public AGameState
 {
 	GENERATED_UCLASS_BODY()
 
+	UPROPERTY(Transient, Replicated)
+	TEnumAsByte<ETeam::Type> WinningTeam;
+
 	TArray<class APlayerState*> GetAllPlayers();
 	TArray<class APlayerState*> GetPlayers(ETeam::Type Team);
 };

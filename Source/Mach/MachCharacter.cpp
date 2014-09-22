@@ -88,6 +88,17 @@ bool AMachCharacter::IsUsePressed()
 	return bIsUsePressed;
 }
 
+ETeam::Type AMachCharacter::GetTeam()
+{
+	AMachPlayerState* State = Cast<AMachPlayerState>(PlayerState);
+	if (State)
+	{
+		return State->Team;
+	}
+
+	return ETeam::None;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -307,30 +318,26 @@ void AMachCharacter::OnDeath()
 }
 
 bool AMachCharacter::ShouldTakeDamage(float Damage, FDamageEvent const & DamageEvent, AController* EventInstigator, AActor* DamageCauser) const {
-	if (Health <= 0.f)
+	if (Role == ROLE_Authority && GetWorld()->GetAuthGameMode())
 	{
-		return false;
+		AMachGameMode* GameMode = Cast<AMachGameMode>(GetWorld()->GetAuthGameMode());
+		if (GameMode)
+		{
+			return GameMode->ShouldTakeDamage(Damage, DamageEvent, EventInstigator->GetCharacter(), this);
+		}
 	}
 
 	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 }
 
-void AMachCharacter::ReceiveAnyDamage(float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, class AActor* DamageCauser)
+void AMachCharacter::ReceiveAnyDamage(float Damage, const class UDamageType* DamageType, class AController* EventInstigator, class AActor* DamageCauser)
 {
-	if (Role == ROLE_Authority && Damage > 0.f)
+	if (Role == ROLE_Authority && Damage > 0.f && GetWorld()->GetAuthGameMode())
 	{
-		// Check for friendly fire
-		UWorld* World = GetWorld();
-		if (World)
+		AMachGameMode* GameMode = Cast<AMachGameMode>(GetWorld()->GetAuthGameMode());
+		if (GameMode)
 		{
-			AMachGameMode* GameMode = Cast<AMachGameMode>(GetWorld()->GetAuthGameMode());
-			if (GameMode && GameMode->IsFriendlyFireEnabled())
-			{
-				AMachPlayerState* ThisPlayerState = Cast<AMachPlayerState>(PlayerState);
-				AMachPlayerState* OtherPlayerState = Cast<AMachPlayerState>(InstigatedBy->PlayerState);
-				if (ThisPlayerState && OtherPlayerState && ThisPlayerState->Team == OtherPlayerState->Team)
-				Damage = Damage * GameMode->GetFriendlyFireDamagePercent();
-			}
+			Damage = GameMode->DamageAmount(Damage, EventInstigator->GetCharacter(), this);
 		}
 
 		UE_LOG(LogTemp, Warning, TEXT("Dealing %.2f damage"), Damage);

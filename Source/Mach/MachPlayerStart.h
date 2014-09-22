@@ -12,6 +12,6 @@ class MACH_API AMachPlayerStart : public APlayerStart
 {
 	GENERATED_UCLASS_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Gameplay)
 	TEnumAsByte<ETeam::Type> Team;
 };

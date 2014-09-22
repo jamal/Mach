@@ -1,16 +1,8 @@
 {
 	"FileVersion": 3,
-	"Version": 0,
-	"VersionName": "0.0",
-	"EngineVersion": "4.1.1-0+UE4",
-	"PackageFileUE4Version": 352,
-	"PackageFileLicenseeUE4Version": 0,
 	"EngineAssociation": "4.4",
-	"FriendlyName": "",
-	"Description": "",
 	"Category": "",
-	"CreatedBy": "",
-	"CreatedByURL": "",
+	"Description": "",
 	"Modules": [
 		{
 			"Name": "Mach",
@@ -18,5 +10,13 @@
 			"LoadingPhase": "Default"
 		}
 	],
-	"EpicSampleNameHash": "0"
+	"Plugins": [
+		{
+			"Name": "GitSourceControl",
+			"Enabled": true
+		}
+	],
+	"TargetPlatforms": [
+		"WindowsNoEditor"
+	]
 }

@@ -4,9 +4,13 @@
 #include "MachHUD.h"
 #include "MachPlayerState.h"
 #include "MachCharacter.h"
+#include "MachGameMode.h"
+
 
 AMachHUD::AMachHUD(const class FPostConstructInitializeProperties& PCIP) : Super(PCIP)
 {
+	UE_LOG(LogTemp, Warning, TEXT("is this working here?"));
+
 	// Set the crosshair texture
 	static ConstructorHelpers::FObjectFinder<UTexture2D> CrosshiarTexObj(TEXT("/Game/Textures/Crosshair"));
 	CrosshairTex = CrosshiarTexObj.Object;
@@ -37,6 +41,7 @@ void AMachHUD::DrawHUD()
 	DrawNetMode();
 	DrawPlayerTeam();
 	DrawPlayerHealth();
+	DrawGameOver();
 }
 
 void AMachHUD::DrawNetMode()
@@ -60,7 +65,7 @@ void AMachHUD::DrawNetMode()
 		break;
 	}
 
-	const FVector2D TextDrawPosition(Center.X, Center.Y - 100.f);
+	const FVector2D TextDrawPosition(Center.X, 10.0f);
 	FCanvasTextItem TextItem(TextDrawPosition, message, Font, FColor::White);
 	TextItem.bCentreX = true;
 	Canvas->DrawItem(TextItem);
@@ -103,5 +108,32 @@ void AMachHUD::DrawPlayerHealth()
 		FCanvasTextItem TextItem(TextDrawPosition, message, Font, FColor::White);
 		TextItem.bCentreX = true;
 		Canvas->DrawItem(TextItem);
+	}
+}
+
+void AMachHUD::DrawGameOver()
+{
+	AMachCharacter* Character = (AMachCharacter*)PlayerOwner->GetPawn();
+	AMachGameState* GameState = GetWorld()->GetGameState<AMachGameState>();
+	if (GameState && Character)
+	{
+		if (GameState && GameState->HasMatchEnded() && GameState->WinningTeam != ETeam::None)
+		{
+			FText message;
+			if (Character->GetTeam() == GameState->WinningTeam)
+			{
+				message = FText::FromString("You Have Won!");
+			}
+			else
+			{
+				message = FText::FromString("You Have Lost");
+			}
+
+			const FVector2D Center(Canvas->ClipX * 0.5f, Canvas->ClipY * 0.5f);
+			const FVector2D TextDrawPosition(Center.X, Center.Y - 100.f);
+			FCanvasTextItem TextItem(TextDrawPosition, message, Font, FColor::White);
+			TextItem.bCentreX = true;
+			Canvas->DrawItem(TextItem);
+		}
 	}
 }
