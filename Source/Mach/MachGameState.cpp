@@ -1,9 +1,5 @@
-
-
 #include "Mach.h"
-#include "MachGameState.h"
-#include "GameFramework/PlayerState.h"
-#include "MachPlayerState.h"
+
 
 AMachGameState::AMachGameState(const class FPostConstructInitializeProperties& PCIP)
 	: Super(PCIP)

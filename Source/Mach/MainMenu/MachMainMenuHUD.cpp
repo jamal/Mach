@@ -1,6 +1,4 @@
 #include "Mach.h"
-#include "MachMainMenuHUD.h"
-#include "MachMainMenuUI.h"
 
 
 AMachMainMenuHUD::AMachMainMenuHUD(const class FPostConstructInitializeProperties& PCIP)

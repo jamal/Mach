@@ -36,6 +36,8 @@ class AMachGameMode : public AGameMode
 
 	void GameOver(ETeam::Type WinningTeam);
 
+	void Killed(AController* Killer, AController* Killed, class AMachCharacter* KilledCharacter);
+
 protected:
 	UPROPERTY()
 	uint32 bFriendlyFire : 1;

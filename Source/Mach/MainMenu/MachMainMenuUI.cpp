@@ -1,6 +1,4 @@
 #include "Mach.h"
-#include "MachMainMenuUI.h"
-#include "MachMainMenuHUD.h"
 
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION

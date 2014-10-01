@@ -1,13 +1,6 @@
 // Copyright 1998-2014 Epic Games, Inc. All Rights Reserved.
 
 #include "Mach.h"
-#include "MachGameMode.h"
-#include "MachHUD.h"
-#include "MachPlayerState.h"
-#include "MachGameState.h"
-#include "MachCharacter.h"
-#include "MachPlayerStart.h"
-#include "MachTeamSpawn.h"
 
 
 AMachGameMode::AMachGameMode(const class FPostConstructInitializeProperties& PCIP)
@@ -21,6 +14,7 @@ AMachGameMode::AMachGameMode(const class FPostConstructInitializeProperties& PCI
 	}
 
 	HUDClass = AMachHUD::StaticClass();
+	PlayerControllerClass = AMachPlayerController::StaticClass();
 	PlayerStateClass = AMachPlayerState::StaticClass();
 	GameStateClass = AMachGameState::StaticClass();
 
@@ -120,6 +114,40 @@ void AMachGameMode::GameOver(ETeam::Type WinningTeam)
 	if (State)
 	{
 		State->WinningTeam = WinningTeam;
+	}
+}
+
+void AMachGameMode::Killed(AController* Killer, AController* KilledPlayer, AMachCharacter* KilledCharacter)
+{
+	AMachPlayerState* KillerState = Cast<AMachPlayerState>(Killer->PlayerState);
+	AMachPlayerState* KilledPlayerState = Cast<AMachPlayerState>(KilledPlayer->PlayerState);
+
+	if (KillerState && KilledPlayerState)
+	{
+		KilledCharacter->Health = 0.f;
+		KilledCharacter->SetLifeSpan(5.0f); // Despawn player after 5 seconds
+
+		KilledPlayerState->SetIsDead(true);
+		// Remove player controller from dead pawn
+		KilledPlayer->Reset();
+
+		// Record kill
+		if (KillerState->Team != KilledPlayerState->Team)
+		{
+			KillerState->ScoreKill(KilledPlayerState);
+		}
+		KilledPlayerState->ScoreDeath(KillerState);
+		
+		// Record assists
+		for (AMachPlayerState* AssistPlayer : KilledPlayerState->AssistPlayers)
+		{
+			if (AssistPlayer->PlayerId != KillerState->PlayerId)
+			{
+				AssistPlayer->ScoreAssist(KilledPlayerState);
+			}
+		}
+
+		// TODO: Broadcast kill to all clients to display in HUD
 	}
 }
 
