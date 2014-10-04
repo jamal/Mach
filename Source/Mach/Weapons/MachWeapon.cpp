@@ -312,28 +312,7 @@ void AMachWeapon::FireWeapon()
 	const FVector end = start + Range * rotation.Vector();
 
 	const FHitResult impact = WeaponTrace(start, end);
-
-	// If we've hit an actor that's controlled remotely
-	if (OwnerPawn && OwnerPawn->IsLocallyControlled() && GetNetMode() == NM_Client)
-	{
-		if (impact.GetActor() && impact.GetActor()->GetRemoteRole() == ROLE_Authority)
-		{
-			ServerNotifyHit(impact, start);
-		}
-		else if (impact.GetActor() == NULL)
-		{
-			if (impact.bBlockingHit)
-			{
-				ServerNotifyHit(impact, start);
-			}
-			else
-			{
-				// ServerNotifyMiss(start);
-			}
-		}
-	}
-
-	SpawnImpactEffects(impact);
+	ProcessHit(start, impact);
 
 	/*
 
@@ -372,6 +351,31 @@ void AMachWeapon::FireWeapon()
 	}
 	}
 	*/
+}
+
+void AMachWeapon::ProcessHit(FVector StartTrace, FHitResult Impact)
+{
+	// If we've hit an actor that's controlled remotely
+	if (OwnerPawn && OwnerPawn->IsLocallyControlled() && GetNetMode() == NM_Client)
+	{
+		if (Impact.GetActor() && Impact.GetActor()->GetRemoteRole() == ROLE_Authority)
+		{
+			ServerNotifyHit(Impact, StartTrace);
+		}
+		else if (Impact.GetActor() == NULL)
+		{
+			if (Impact.bBlockingHit)
+			{
+				ServerNotifyHit(Impact, StartTrace);
+			}
+			else
+			{
+				// ServerNotifyMiss(start);
+			}
+		}
+	}
+
+	SpawnImpactEffects(Impact);
 }
 
 FHitResult AMachWeapon::WeaponTrace(const FVector& start, const FVector& end) const

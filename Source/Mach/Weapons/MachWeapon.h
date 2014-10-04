@@ -79,6 +79,10 @@ class AMachWeapon : public AActor
 	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
 	float Range;
 
+	/** Weapon spread */
+	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
+	float Spread;
+
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = WeaponStat)
 	TEnumAsByte<EWeaponModelType::Type> WeaponModelType;
 
@@ -134,7 +138,8 @@ protected:
 	FVector GetViewRotation();
 	void GetViewPoint(FVector& start, FRotator& rotation);
 	void SpawnImpactEffects(const FHitResult& impact);
-	void FireWeapon();
+	virtual void FireWeapon();
+	void ProcessHit(FVector Start, FHitResult Impact);
 	FHitResult WeaponTrace(const FVector& start, const FVector& end) const;
 	void AttachMesh();
 	void DetachMesh();
