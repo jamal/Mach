@@ -396,6 +396,7 @@ void AMachWeapon::SpawnImpactEffects(const FHitResult& impact)
 		UGameplayStatics::FinishSpawningActor(effect, FTransform(impact.ImpactNormal.Rotation(), impact.ImpactPoint));
 	}
 
+
 	if (MuzzleFX)
 	{
 		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
