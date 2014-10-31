@@ -376,8 +376,6 @@ void AMachWeapon::GetViewPoint(FVector& start, FRotator& rotation)
 
 void AMachWeapon::SpawnImpactEffects(const FHitResult& impact)
 {
-	BurstCounter++;
-
 	// Dirty hack to have two surface types for shield and flesh
 	AMachCharacter* Character = Cast<AMachCharacter>(impact.Actor.Get());
 	if (Character != NULL)
@@ -398,16 +396,6 @@ void AMachWeapon::SpawnImpactEffects(const FHitResult& impact)
 	{
 		effect->SurfaceHit = impact;
 		UGameplayStatics::FinishSpawningActor(effect, FTransform(impact.ImpactNormal.Rotation(), impact.ImpactPoint));
-	}
-
-
-	if (MuzzleFX)
-	{
-		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
-		if (!bLoopedMuzzleFX || MuzzlePSC == NULL)
-		{
-			MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, UseWeaponMesh, MuzzleAttachPoint);
-		}
 	}
 }
 
@@ -470,6 +458,9 @@ void AMachWeapon::FireWeapon()
 	}
 
 	ConsumeAmmo();
+
+	// BurstCounter replicates every time you fire to spawn effects on clients
+	BurstCounter++;
 
 	if (ProjectileClass != NULL) {
 		FireProjectile();
@@ -542,7 +533,14 @@ void AMachWeapon::FireProjectile()
 	SpawnParams.Owner = Instigator;
 	SpawnParams.Instigator = Instigator;
 
-	//const FVector MuzzleLocation = AimLoc + AimRot.RotateVector(MuzzleOffset);
+	if (MuzzleFX)
+	{
+		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
+		if (!bLoopedMuzzleFX || MuzzlePSC == NULL)
+		{
+			MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, UseWeaponMesh, MuzzleAttachPoint);
+		}
+	}
 
 	// TODO: This is probably going to work like shit using a remote server
 	if (Role == ROLE_Authority) {
@@ -599,6 +597,18 @@ void AMachWeapon::ProcessHit(const FHitResult& Impact, const FVector& StartTrace
 	SpawnTrailEffect(EndTrace);
 }
 
+void AMachWeapon::SimulateWeaponFiring()
+{
+	if (MuzzleFX)
+	{
+		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
+		if (!bLoopedMuzzleFX || MuzzlePSC == NULL)
+		{
+			MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, UseWeaponMesh, MuzzleAttachPoint);
+		}
+	}
+}
+
 FHitResult AMachWeapon::WeaponTrace(const FVector& start, const FVector& end) const
 {
 	const FName TraceTag("WeaponTrace");
@@ -645,4 +655,5 @@ void AMachWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 void AMachWeapon::OnRep_BurstCounter()
 {
 	SpawnImpactEffects(HitImpact);
+	SimulateWeaponFiring();
 }

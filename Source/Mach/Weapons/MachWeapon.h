@@ -207,6 +207,8 @@ protected:
 	void GetViewPoint(FVector& start, FRotator& rotation);
 	void SpawnImpactEffects(const FHitResult& impact);
 	void SpawnTrailEffect(const FVector& EndPoint);
+
+	void SimulateWeaponFiring();
 	
 	float PlayWeaponAnimation(const FWeaponAnim& Animation);
 	void StopWeaponAnimation(const FWeaponAnim& Animation);
