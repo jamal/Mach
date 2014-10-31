@@ -14,6 +14,8 @@ AMachWeapon::AMachWeapon(const class FPostConstructInitializeProperties& PCIP)
 	Range = 12000.f;
 	BurstCounter = 0;
 
+	bPlayingFireAnim = false;
+	bLoopedMuzzleFX = false;
 	bIsEquipped = false;
 	bEquipPending = false;
 	bFireIntent = false;
@@ -265,6 +267,12 @@ void AMachWeapon::OnBurstFinished()
 		FireWeapon();
 	}
 
+	if (bPlayingFireAnim)
+	{
+		StopWeaponAnimation(FireAnim);
+		bPlayingFireAnim = false;
+	}
+
 	GetWorldTimerManager().ClearTimer(this, &AMachWeapon::HandleFiring);
 	bRefiring = false;
 }
@@ -387,6 +395,61 @@ void AMachWeapon::SpawnImpactEffects(const FHitResult& impact)
 		effect->SurfaceHit = impact;
 		UGameplayStatics::FinishSpawningActor(effect, FTransform(impact.ImpactNormal.Rotation(), impact.ImpactPoint));
 	}
+
+	if (MuzzleFX)
+	{
+		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
+		if (!bLoopedMuzzleFX || MuzzlePSC == NULL)
+		{
+			MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, UseWeaponMesh, MuzzleAttachPoint);
+		}
+	}
+}
+
+void AMachWeapon::SpawnTrailEffect(const FVector& EndPoint)
+{
+	return;
+	if (TrailFX)
+	{
+		const FVector Origin = GetMuzzleLocation();
+
+		UParticleSystemComponent* TrailPSC = UGameplayStatics::SpawnEmitterAtLocation(this, TrailFX, Origin);
+		if (TrailPSC)
+		{
+			TrailPSC->SetVectorParameter(TrailTargetParam, EndPoint);
+		}
+	}
+}
+
+float AMachWeapon::PlayWeaponAnimation(const FWeaponAnim& Animation)
+{
+	float Duration = 0.0f;
+	/*
+	if (OwnerPawn)
+	{
+		UAnimMontage* UseAnim = OwnerPawn->IsFirstPerson() ? Animation.Pawn1P : Animation.Pawn3P;
+		if (UseAnim)
+		{
+			Duration = OwnerPawn->PlayAnimMontage(UseAnim);
+		}
+	}
+	*/
+	
+	return Duration;
+}
+
+void AMachWeapon::StopWeaponAnimation(const FWeaponAnim& Animation)
+{
+	/*
+	if (OwnerPawn)
+	{
+		UAnimMontage* UseAnim = OwnerPawn->IsFirstPerson() ? Animation.Pawn1P : Animation.Pawn3P;
+		if (UseAnim)
+		{
+			OwnerPawn->StopAnimMontage(UseAnim);
+		}
+	}
+	*/
 }
 
 void AMachWeapon::ConsumeAmmo()
@@ -414,9 +477,14 @@ void AMachWeapon::FireWeapon()
 		const FVector end = start + Range * rotation.Vector();
 
 		const FHitResult impact = WeaponTrace(start, end);
-		ProcessHit(start, impact);
+		ProcessHit(impact, start, end);
 	}
 
+	if (!bPlayingFireAnim)
+	{
+		PlayWeaponAnimation(FireAnim);
+		bPlayingFireAnim = true;
+	}
 
 	/*
 
@@ -463,40 +531,43 @@ void AMachWeapon::FireProjectile()
 	FRotator AimRot;
 	GetViewPoint(AimLoc, AimRot);
 
+	FVector Muzzle = GetMuzzleLocation();
+
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = Instigator;
 	SpawnParams.Instigator = Instigator;
 
 	//const FVector MuzzleLocation = AimLoc + AimRot.RotateVector(MuzzleOffset);
-	GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, AimLoc, AimRot, SpawnParams);
+
+	// TODO: This is probably going to work like shit using a remote server
+	if (Role == ROLE_Authority) {
+		GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, Muzzle, AimRot, SpawnParams);
+	}
 }
 
-void AMachWeapon::ProcessHit(FVector StartTrace, FHitResult Impact)
+USkeletalMeshComponent* AMachWeapon::GetWeaponMesh() const
 {
-	// If we've hit an actor that's controlled remotely
-	/*
-	if (OwnerPawn && OwnerPawn->IsLocallyControlled() && GetNetMode() == NM_Client)
-	{
-		if (Impact.GetActor() && Impact.GetActor()->GetRemoteRole() == ROLE_Authority)
-		{
-			ServerNotifyHit(Impact, StartTrace);
-		}
-		else if (Impact.GetActor() == NULL)
-		{
-			if (Impact.bBlockingHit)
-			{
-				ServerNotifyHit(Impact, StartTrace);
-			}
-			else
-			{
-				// ServerNotifyMiss(start);
-			}
-		}
-	}
-	*/
+	return (OwnerPawn != NULL && OwnerPawn->IsFirstPerson()) ? Mesh1P : Mesh3P;
+}
 
+FVector AMachWeapon::GetMuzzleLocation() const
+{
+	USkeletalMeshComponent* UseMesh = GetWeaponMesh();
+	return UseMesh->GetSocketLocation(MuzzleAttachPoint);
+}
+
+FVector AMachWeapon::GetMuzzleDirection() const
+{
+	USkeletalMeshComponent* UseMesh = GetWeaponMesh();
+	return UseMesh->GetSocketRotation(MuzzleAttachPoint).Vector();
+}
+
+void AMachWeapon::ProcessHit(const FHitResult& Impact, const FVector& StartTrace, const FVector& EndTrace)
+{
 	// Replicate the impact effect
 	HitImpact = Impact;
+
+	const FVector EndPoint = Impact.GetActor() ? Impact.ImpactPoint : EndTrace;
 
 	// Deal damage
 	if (Impact.GetActor())
@@ -518,12 +589,9 @@ void AMachWeapon::ProcessHit(FVector StartTrace, FHitResult Impact)
 		{
 			SpawnImpactEffects(Impact);
 		}
-		// Missed
-		else
-		{
-			// TODO: Missed effects and replication
-		}
 	}
+
+	SpawnTrailEffect(EndTrace);
 }
 
 FHitResult AMachWeapon::WeaponTrace(const FVector& start, const FVector& end) const

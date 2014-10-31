@@ -15,27 +15,27 @@ AMachWeaponShotgun::AMachWeaponShotgun(const class FPostConstructInitializePrope
 	Damage = 5;
 	Spread = 10.f;
 
-	BulletVectors.Add(FVector(1, 0.01, -0.01));
+	BulletVectors.Add(FVector(1, 0.001, -0.001));
 
-	BulletVectors.Add(FVector(1, 0.045, -0.045));
-	BulletVectors.Add(FVector(1, -0.045, -0.045));
+	BulletVectors.Add(FVector(1, 0.035, 0.035));
+	BulletVectors.Add(FVector(1, -0.035, 0.035));
+	BulletVectors.Add(FVector(1, -0.035, -0.035));
+	BulletVectors.Add(FVector(1, 0.035, -0.035));
+
+	BulletVectors.Add(FVector(1, 0.045, 0));
 	BulletVectors.Add(FVector(1, 0, 0.045));
+	BulletVectors.Add(FVector(1, -0.045, 0));
+	BulletVectors.Add(FVector(1, 0, -0.045));
 
-	BulletVectors.Add(FVector(1, 0.045, -0.045));
-	BulletVectors.Add(FVector(1, -0.045, -0.045));
-	BulletVectors.Add(FVector(1, 0, 0.045));
+	BulletVectors.Add(FVector(1, 0.07, 0.07));
+	BulletVectors.Add(FVector(1, -0.07, 0.07));
+	BulletVectors.Add(FVector(1, -0.07, -0.07));
+	BulletVectors.Add(FVector(1, 0.07, -0.07));
 
-	BulletVectors.Add(FVector(1, 0, -0.085));
-	BulletVectors.Add(FVector(1, -0.085, 0.085));
-	BulletVectors.Add(FVector(1, 0.085, 0.085));
-
-	BulletVectors.Add(FVector(1, 0.13, -0.13));
-	BulletVectors.Add(FVector(1, -0.13, -0.13));
-	BulletVectors.Add(FVector(1, 0, 0.13));
-
-	BulletVectors.Add(FVector(1, 0, -0.175));
-	BulletVectors.Add(FVector(1, -0.175, 0.175));
-	BulletVectors.Add(FVector(1, 0.175, 0.175));
+	BulletVectors.Add(FVector(1, 0.09, 0));
+	BulletVectors.Add(FVector(1, 0, 0.09));
+	BulletVectors.Add(FVector(1, -0.09, 0));
+	BulletVectors.Add(FVector(1, 0, -0.09));
 }
 
 void AMachWeaponShotgun::Tick(float DeltaTime)
@@ -68,6 +68,6 @@ void AMachWeaponShotgun::FireWeapon()
 		const FVector EndTrace = AimRotMatrix.TransformVector(StartTrace + RotatedVector * Range);
 
 		const FHitResult Impact = WeaponTrace(StartTrace, EndTrace);
-		ProcessHit(StartTrace, Impact);
+		ProcessHit(Impact, StartTrace, EndTrace);
 	}
 }

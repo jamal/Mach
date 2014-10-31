@@ -78,6 +78,11 @@ bool AMachCharacter::IsUsePressed()
 	return bIsUsePressed;
 }
 
+bool AMachCharacter::IsFirstPerson() const
+{
+	return Controller && Controller->IsLocalPlayerController();
+}
+
 ETeam::Type AMachCharacter::GetTeam()
 {
 	AMachPlayerState* State = Cast<AMachPlayerState>(PlayerState);

@@ -81,6 +81,7 @@ class AMachCharacter : public ACharacter
 	FName GetWeaponAttachPoint() const;
 
 	bool IsUsePressed();
+	bool IsFirstPerson() const;
 
 	ETeam::Type GetTeam();
 
