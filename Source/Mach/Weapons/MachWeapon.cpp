@@ -199,9 +199,13 @@ void AMachWeapon::UpdateWeaponState()
 
 	if (bIsEquipped)
 	{
+		// We will start reloading when the user presses reload, or if they try to fire with no ammo
+		if (bFireIntent && !CanFire()) {
+			bReloadIntent = true;
+		}
+
 		if (bReloadIntent && CanReload())
 		{
-			// TODO: Handle reload
 			NewState = EWeaponState::Reloading;
 		}
 		else if (!bReloadIntent && bFireIntent && CanFire())
