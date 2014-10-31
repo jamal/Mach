@@ -20,10 +20,6 @@ AMachCharacter::AMachCharacter(const class FPostConstructInitializeProperties& P
 		CharacterMovement->SetIsReplicated(true); // Enable replication by default
 	}
 
-	// set our turn rates for input
-	BaseTurnRate = 45.f;
-	BaseLookUpRate = 45.f;
-
 	// Create a CameraComponent	
 	FirstPersonCameraComponent = PCIP.CreateDefaultSubobject<UCameraComponent>(this, TEXT("FirstPersonCamera"));
 	FirstPersonCameraComponent->AttachParent = CapsuleComponent;
@@ -101,21 +97,17 @@ void AMachCharacter::SetupPlayerInputComponent(class UInputComponent* InputCompo
 	// set up gameplay key bindings
 	check(InputComponent);
 
+	// TODO: MOve all of this to the player controller
+
 	InputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 
 	InputComponent->BindAction("Fire", IE_Pressed, this, &AMachCharacter::OnStartFire);
 	InputComponent->BindAction("Fire", IE_Released, this, &AMachCharacter::OnStopFire);
 
+	InputComponent->BindAction("Reload", IE_Pressed, this, &AMachCharacter::OnReload);
+
 	InputComponent->BindAxis("MoveForward", this, &AMachCharacter::MoveForward);
 	InputComponent->BindAxis("MoveRight", this, &AMachCharacter::MoveRight);
-	
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
-	InputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
-	InputComponent->BindAxis("TurnRate", this, &AMachCharacter::TurnAtRate);
-	InputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
-	InputComponent->BindAxis("LookUpRate", this, &AMachCharacter::LookUpAtRate);
 
 	InputComponent->BindAction("Equip1", IE_Pressed, this, &AMachCharacter::Equip1);
 	InputComponent->BindAction("Equip2", IE_Pressed, this, &AMachCharacter::Equip2);
@@ -125,9 +117,18 @@ void AMachCharacter::SetupPlayerInputComponent(class UInputComponent* InputCompo
 	InputComponent->BindAction("Use", IE_Released, this, &AMachCharacter::OnStopUse);
 }
 
+void AMachCharacter::OnReload()
+{
+	if (CurrentWeapon != NULL)
+	{
+		CurrentWeapon->Reload();
+	}
+}
+
 void AMachCharacter::OnStartFire()
 {
-	if (!bIsDying && !bFireIntent) {
+	if (!bIsDying && !bFireIntent)
+	{
 		bFireIntent = true;
 		if (CurrentWeapon != NULL)
 		{
@@ -177,18 +178,6 @@ void AMachCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
 	}
-}
-
-void AMachCharacter::TurnAtRate(float Rate)
-{
-	// calculate delta for this frame from the rate information
-	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
-}
-
-void AMachCharacter::LookUpAtRate(float Rate)
-{
-	// calculate delta for this frame from the rate information
-	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
 void AMachCharacter::SetCurrentWeapon(AMachWeapon* NewWeapon)

@@ -47,3 +47,6 @@ Saved/**
 
 *.TMP
 /build
+
+.plastic
+ignore.conf

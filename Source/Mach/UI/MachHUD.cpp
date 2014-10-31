@@ -1,11 +1,8 @@
 #include "Mach.h"
 #include "UI/Widgets/SMachScoreboardWidget.h"
 
-
 AMachHUD::AMachHUD(const class FPostConstructInitializeProperties& PCIP) : Super(PCIP)
 {
-	UE_LOG(LogTemp, Warning, TEXT("is this working here?"));
-
 	// Set the crosshair texture
 	static ConstructorHelpers::FObjectFinder<UTexture2D> CrosshiarTexObj(TEXT("/Game/Textures/Crosshair"));
 	CrosshairTex = CrosshiarTexObj.Object;
@@ -37,12 +34,12 @@ void AMachHUD::DrawHUD()
 	// draw the crosshair
 	FCanvasTileItem TileItem( CrosshairDrawPosition, CrosshairTex->Resource, FLinearColor::White);
 	TileItem.BlendMode = SE_BLEND_Translucent;
-	Canvas->DrawItem( TileItem );
+	Canvas->DrawItem(TileItem);
 
-	DrawNetMode();
-	DrawPlayerTeam();
-	DrawPlayerHealth();
-	DrawGameOver();
+	//DrawNetMode();
+	//DrawPlayerTeam();
+	//DrawPlayerHealth();
+	//DrawGameOver();
 }
 
 void AMachHUD::DrawNetMode()

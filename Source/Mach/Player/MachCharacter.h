@@ -19,14 +19,6 @@ class AMachCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	TSubobjectPtr<class UCameraComponent> FirstPersonCameraComponent;
 
-	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
-	float BaseTurnRate;
-
-	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
-	float BaseLookUpRate;
-
 	/** Gun muzzle's offset from the characters location */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
 	FVector GunOffset;
@@ -71,10 +63,10 @@ class AMachCharacter : public ACharacter
 
 	class AMachWeapon* LocalLastWeapon;
 
-	UPROPERTY(Transient, Replicated)
+	UPROPERTY(BlueprintReadWrite, Transient, Replicated, Category = Weapons)
 	class AMachWeapon* PrimaryWeapon;
 
-	UPROPERTY(Transient, Replicated)
+	UPROPERTY(BlueprintReadWrite, Transient, Replicated, Category = Weapons)
 	class AMachWeapon* SecondaryWeapon;
 
 	UPROPERTY(Transient, Replicated)
@@ -105,6 +97,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Inventory)
 	FName WeaponAttachPoint;
 
+	/** Triggered when the Reload button is pressed */
+	void OnReload();
+
 	/** Triggered when the Fire button is pressed */
 	void OnStartFire();
 	/** Triggered when the Fire button is released */
@@ -113,20 +108,8 @@ protected:
 	/** Handles moving forward/backward */
 	void MoveForward(float Val);
 
-	/** Handles stafing movement, left and right */
+	/** Handles strafing movement, left and right */
 	void MoveRight(float Val);
-
-	/**
-	 * Called via input to turn at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void TurnAtRate(float Rate);
-
-	/**
-	 * Called via input to turn look up/down at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void LookUpAtRate(float Rate);
 
 	void SetCurrentWeapon(class AMachWeapon* Weapon);
 

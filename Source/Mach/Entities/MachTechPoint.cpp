@@ -28,6 +28,8 @@ AMachTechPoint::AMachTechPoint(const class FPostConstructInitializeProperties& P
 	PointLight1->Intensity = LightIntensity;
 	PointLight1->bVisible = true;
 	PointLight1->SetLightColor(FLinearColor::White);
+
+
 	PointLight1->AttachParent = SphereComponent;
 }
 

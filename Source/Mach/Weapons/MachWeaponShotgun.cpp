@@ -5,47 +5,69 @@
 AMachWeaponShotgun::AMachWeaponShotgun(const class FPostConstructInitializeProperties& PCIP)
 	: Super(PCIP)
 {
+	PrimaryActorTick.bCanEverTick = true;
+
+	MuzzleOffset = FVector(100, 0, 0);
+
 	TimeBetweenShots = 1.0f;
 	WeaponModelType = EWeaponModelType::Rifle;
 	BurstMode = EWeaponBurstMode::Full;
-	NumPellets = 10;
-	Damage = 7;
-	Spread = 20.f;
+	Damage = 5;
+	Spread = 10.f;
+
+	BulletVectors.Add(FVector(1, 0.01, -0.01));
+
+	BulletVectors.Add(FVector(1, 0.045, -0.045));
+	BulletVectors.Add(FVector(1, -0.045, -0.045));
+	BulletVectors.Add(FVector(1, 0, 0.045));
+
+	BulletVectors.Add(FVector(1, 0.045, -0.045));
+	BulletVectors.Add(FVector(1, -0.045, -0.045));
+	BulletVectors.Add(FVector(1, 0, 0.045));
+
+	BulletVectors.Add(FVector(1, 0, -0.085));
+	BulletVectors.Add(FVector(1, -0.085, 0.085));
+	BulletVectors.Add(FVector(1, 0.085, 0.085));
+
+	BulletVectors.Add(FVector(1, 0.13, -0.13));
+	BulletVectors.Add(FVector(1, -0.13, -0.13));
+	BulletVectors.Add(FVector(1, 0, 0.13));
+
+	BulletVectors.Add(FVector(1, 0, -0.175));
+	BulletVectors.Add(FVector(1, -0.175, 0.175));
+	BulletVectors.Add(FVector(1, 0.175, 0.175));
+}
+
+void AMachWeaponShotgun::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	Rot += 100 * DeltaTime;
+	if (Rot > 360) {
+		Rot = 0;
+	}
 }
 
 void AMachWeaponShotgun::FireWeapon()
 {
-	float Steps[] = { NumPellets*.2, NumPellets*.5, NumPellets };
-	int CurStep = 0;
-	
+	if (!CanFire())
+	{
+		return;
+	}
+
+	ConsumeAmmo();
+
 	FVector StartTrace;
 	FRotator AimRot;
 	GetViewPoint(StartTrace, AimRot);
 
-	int Pellets = 0;
-	for (int i = 0; i < NumPellets; ++i)
+	FRotationMatrix AimRotMatrix(AimRot);
+
+	for (FVector BulletVector : BulletVectors)
 	{
-		if (i >= Steps[CurStep])
-		{
-			CurStep++;
-		}
-
-		const float CurrentSpread = Spread * ((CurStep + 1) / 3.f);
-
-		UE_LOG(LogTemp, Warning, TEXT("Spread at %.2f"), CurrentSpread);
-
-		const int32 RandomSeed = FMath::Rand();
-		FRandomStream WeaponRandomStream(RandomSeed);
-		const float ConeHalfAngle = FMath::DegreesToRadians(CurrentSpread * 0.5f);
-
-		// TODO: This is too random, and there's a chance of all pellets still being near the middle
-		// We need to pick between a min and max at each step rather than just increasing the max
-		const FVector ShootDir = WeaponRandomStream.VRandCone(AimRot.Vector(), ConeHalfAngle, ConeHalfAngle);
-
-		const FVector EndTrace = StartTrace + ShootDir * Range;
+		FVector RotatedVector = BulletVector.RotateAngleAxis(Rot, FVector(1, 0, 0));
+		const FVector EndTrace = AimRotMatrix.TransformVector(StartTrace + RotatedVector * Range);
 
 		const FHitResult Impact = WeaponTrace(StartTrace, EndTrace);
-
 		ProcessHit(StartTrace, Impact);
 	}
 }

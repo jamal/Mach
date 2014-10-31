@@ -6,7 +6,7 @@ public class Mach : ModuleRules
 {
 	public Mach(TargetInfo Target)
 	{
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
-        PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "UMG", "Slate", "SlateCore" });
+        //PrivateDependencyModuleNames.AddRange(new string[] { "UMG", "Slate", "SlateCore" });
 	}
 }

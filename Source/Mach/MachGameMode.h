@@ -15,7 +15,7 @@ class AMachGameMode : public AGameMode
 	UPROPERTY()
 	int32 NumPlayersTeamB;
 
-	APlayerController* Login(UPlayer* NewPlayer, const FString& Portal, const FString& Options, const TSharedPtr<FUniqueNetId>& UniqueId, FString& ErrorMessage);
+	FString InitNewPlayer(APlayerController* NewPlayerController, const TSharedPtr<FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal);
 
 	AActor* ChoosePlayerStart(AController* Player);
 

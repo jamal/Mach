@@ -3,6 +3,11 @@
 AMachWeapon::AMachWeapon(const class FPostConstructInitializeProperties& PCIP)
 	: Super(PCIP)
 {
+	bReplicates = true;
+	bReplicateInstigator = true;
+
+	MaxAmmo = 250;
+	AmmoPerClip = 50;
 	TimeBetweenShots = 0.1f;
 	TimeBetweenSemiBursts = 0.1f;
 	BurstMode = EWeaponBurstMode::Full;
@@ -14,9 +19,6 @@ AMachWeapon::AMachWeapon(const class FPostConstructInitializeProperties& PCIP)
 	bFireIntent = false;
 	bReloadIntent = false;
 	bRefiring = false;
-
-	bReplicates = true;
-	bReplicateInstigator = true;
 
 	// Create an arrow component to use as the root
 	TSubobjectPtr<UArrowComponent> Arrow = PCIP.CreateDefaultSubobject<UArrowComponent>(this, TEXT("ArrowComponent"));
@@ -30,6 +32,13 @@ AMachWeapon::AMachWeapon(const class FPostConstructInitializeProperties& PCIP)
 
 	Mesh3P = PCIP.CreateDefaultSubobject<USkeletalMeshComponent>(this, TEXT("WeaponMesh3P"));
 	Mesh3P->SetOwnerNoSee(true);
+}
+
+void AMachWeapon::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	TotalAmmo = MaxAmmo;
+	Ammo = AmmoPerClip;
 }
 
 void AMachWeapon::SetOwningPawn(AMachCharacter* NewPawn)
@@ -47,6 +56,7 @@ void AMachWeapon::OnEquip()
 {
 	if (!bIsEquipped)
 	{
+		// TODO: Play equip animation
 		AttachMesh();
 
 		bEquipPending = true;
@@ -113,6 +123,16 @@ void AMachWeapon::StartFire()
 	}
 }
 
+bool AMachWeapon::ServerStartFire_Validate()
+{
+	return true;
+}
+
+void AMachWeapon::ServerStartFire_Implementation()
+{
+	StartFire();
+}
+
 void AMachWeapon::StopFire()
 {
 	if (Role < ROLE_Authority)
@@ -127,9 +147,22 @@ void AMachWeapon::StopFire()
 	}
 }
 
+bool AMachWeapon::ServerStopFire_Validate()
+{
+	return true;
+}
+
+void AMachWeapon::ServerStopFire_Implementation()
+{
+	StopFire();
+}
+
 void AMachWeapon::Reload()
 {
-	// NOT REALLY IMPLEMENTED ...
+	if (Role < ROLE_Authority)
+	{
+		ServerReload();
+	}
 
 	if (!bReloadIntent)
 	{
@@ -138,18 +171,38 @@ void AMachWeapon::Reload()
 	}
 }
 
+bool AMachWeapon::ServerReload_Validate()
+{
+	return true;
+}
+
+void AMachWeapon::ServerReload_Implementation()
+{
+	Reload();
+}
+
+bool AMachWeapon::CanReload()
+{
+	return TotalAmmo > 0 && Ammo < AmmoPerClip;
+}
+
+bool AMachWeapon::CanFire()
+{
+	return Ammo > 0;
+}
+
 void AMachWeapon::UpdateWeaponState()
 {
 	EWeaponState::Type NewState = EWeaponState::Idle;
 
 	if (bIsEquipped)
 	{
-		if (bReloadIntent) // && CanReload()
+		if (bReloadIntent && CanReload())
 		{
 			// TODO: Handle reload
 			NewState = EWeaponState::Reloading;
 		}
-		else if (!bReloadIntent && bFireIntent) // && CanFire()
+		else if (!bReloadIntent && bFireIntent && CanFire())
 		{
 			NewState = EWeaponState::Firing;
 		}
@@ -175,6 +228,11 @@ void AMachWeapon::SetCurrentState(EWeaponState::Type NewState)
 	if (PrevState != EWeaponState::Firing && NewState == EWeaponState::Firing)
 	{
 		OnBurstStarted();
+	}
+
+	if (PrevState != EWeaponState::Reloading && NewState == EWeaponState::Reloading)
+	{
+		OnReloadStarted();
 	}
 }
 
@@ -211,17 +269,37 @@ void AMachWeapon::OnBurstFinished()
 	bRefiring = false;
 }
 
+void AMachWeapon::OnReloadStarted()
+{
+	// TODO: Actually fix this, tie to animation instead of a timer
+	UE_LOG(LogTemp, Warning, TEXT("reload started"));
+	GetWorldTimerManager().SetTimer(this, &AMachWeapon::OnReloadFinished, 2, false);
+}
+
+void AMachWeapon::OnReloadFinished()
+{
+	bReloadIntent = false;
+
+	int32 Refill = AmmoPerClip - Ammo;
+	TotalAmmo -= Refill;
+	if (TotalAmmo < 0)
+	{
+		TotalAmmo = 0;
+		Refill += TotalAmmo;
+	}
+
+	Ammo += Refill;
+
+	UE_LOG(LogTemp, Warning, TEXT("reload finished, Refill: %d, Ammo: %d, Total Ammo: %d"), Refill, Ammo, TotalAmmo);
+
+	UpdateWeaponState();
+}
+
 void AMachWeapon::HandleFiring()
 {
 	if (BurstMode != EWeaponBurstMode::Charge)
 	{
 		FireWeapon();
-
-		// Play weapon fire FX on remote clients
-		if (Role == ROLE_Authority)
-		{
-			BurstCounter++;
-		}
 	}
 
 	// Determine if we're refiring based on burst mode
@@ -239,9 +317,14 @@ void AMachWeapon::HandleFiring()
 		bRefiring = false;
 	}
 
-	if (bRefiring)
+	if (bRefiring && CanFire())
 	{
 		GetWorldTimerManager().SetTimer(this, &AMachWeapon::HandleFiring, TimeBetweenShots, false);
+	}
+
+	if (!CanFire())
+	{
+		OnBurstFinished();
 	}
 
 	fLastFireTime = GetWorld()->GetTimeSeconds();
@@ -281,6 +364,8 @@ void AMachWeapon::GetViewPoint(FVector& start, FRotator& rotation)
 
 void AMachWeapon::SpawnImpactEffects(const FHitResult& impact)
 {
+	BurstCounter++;
+
 	// Dirty hack to have two surface types for shield and flesh
 	AMachCharacter* Character = Cast<AMachCharacter>(impact.Actor.Get());
 	if (Character != NULL)
@@ -304,15 +389,34 @@ void AMachWeapon::SpawnImpactEffects(const FHitResult& impact)
 	}
 }
 
+void AMachWeapon::ConsumeAmmo()
+{
+	Ammo -= 1;
+}
+
 void AMachWeapon::FireWeapon()
 {
-	FVector start;
-	FRotator rotation;
-	GetViewPoint(start, rotation);
-	const FVector end = start + Range * rotation.Vector();
+	if (!CanFire())
+	{
+		return;
+	}
 
-	const FHitResult impact = WeaponTrace(start, end);
-	ProcessHit(start, impact);
+	ConsumeAmmo();
+
+	if (ProjectileClass != NULL) {
+		FireProjectile();
+	}
+	else
+	{
+		FVector start;
+		FRotator rotation;
+		GetViewPoint(start, rotation);
+		const FVector end = start + Range * rotation.Vector();
+
+		const FHitResult impact = WeaponTrace(start, end);
+		ProcessHit(start, impact);
+	}
+
 
 	/*
 
@@ -353,9 +457,24 @@ void AMachWeapon::FireWeapon()
 	*/
 }
 
+void AMachWeapon::FireProjectile()
+{
+	FVector AimLoc;
+	FRotator AimRot;
+	GetViewPoint(AimLoc, AimRot);
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = Instigator;
+	SpawnParams.Instigator = Instigator;
+
+	//const FVector MuzzleLocation = AimLoc + AimRot.RotateVector(MuzzleOffset);
+	GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, AimLoc, AimRot, SpawnParams);
+}
+
 void AMachWeapon::ProcessHit(FVector StartTrace, FHitResult Impact)
 {
 	// If we've hit an actor that's controlled remotely
+	/*
 	if (OwnerPawn && OwnerPawn->IsLocallyControlled() && GetNetMode() == NM_Client)
 	{
 		if (Impact.GetActor() && Impact.GetActor()->GetRemoteRole() == ROLE_Authority)
@@ -374,8 +493,37 @@ void AMachWeapon::ProcessHit(FVector StartTrace, FHitResult Impact)
 			}
 		}
 	}
+	*/
 
-	SpawnImpactEffects(Impact);
+	// Replicate the impact effect
+	HitImpact = Impact;
+
+	// Deal damage
+	if (Impact.GetActor())
+	{
+		// Spawn effects on the client
+		SpawnImpactEffects(Impact);
+
+		FPointDamageEvent PointDmg;
+		PointDmg.HitInfo = Impact;
+		PointDmg.ShotDirection = StartTrace;
+		PointDmg.Damage = Damage;
+
+		float dmg = Impact.GetActor()->TakeDamage(Damage, PointDmg, OwnerPawn->Controller, this);
+	}
+	else
+	{
+		// Hit a non-actor surface
+		if (Impact.bBlockingHit)
+		{
+			SpawnImpactEffects(Impact);
+		}
+		// Missed
+		else
+		{
+			// TODO: Missed effects and replication
+		}
+	}
 }
 
 FHitResult AMachWeapon::WeaponTrace(const FVector& start, const FVector& end) const
@@ -405,45 +553,6 @@ bool AMachWeapon::ServerNotifyHit_Validate(const FHitResult impact, const FVecto
 
 void AMachWeapon::ServerNotifyHit_Implementation(const FHitResult impact, const FVector origin)
 {
-	// Deal damage
-	if (Role == ROLE_Authority && impact.GetActor())
-	{
-		FPointDamageEvent PointDmg;
-		PointDmg.HitInfo = impact;
-		PointDmg.ShotDirection = origin;
-		PointDmg.Damage = Damage;
-
-		float dmg = impact.GetActor()->TakeDamage(Damage, PointDmg, OwnerPawn->Controller, this);
-	}
-
-	// Replicate the impact FX back to the clients
-	if (Role == ROLE_Authority)
-	{
-		HitImpact = impact;
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////
-// Input - Server Side
-
-bool AMachWeapon::ServerStartFire_Validate()
-{
-	return true;
-}
-
-void AMachWeapon::ServerStartFire_Implementation()
-{
-	StartFire();
-}
-
-bool AMachWeapon::ServerStopFire_Validate()
-{
-	return true;
-}
-
-void AMachWeapon::ServerStopFire_Implementation()
-{
-	StopFire();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -455,6 +564,9 @@ void AMachWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 
 	DOREPLIFETIME_CONDITION(AMachWeapon, HitImpact, COND_SkipOwner);
 	DOREPLIFETIME_CONDITION(AMachWeapon, BurstCounter, COND_SkipOwner);
+
+	DOREPLIFETIME_CONDITION(AMachWeapon, Ammo, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AMachWeapon, TotalAmmo, COND_OwnerOnly);
 }
 
 void AMachWeapon::OnRep_BurstCounter()

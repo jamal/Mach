@@ -3,6 +3,7 @@
 #include "GameFramework/Actor.h"
 #include "MachWeapon.generated.h"
 
+UENUM(WeaponState)
 namespace EWeaponState
 {
 	enum Type
@@ -50,18 +51,29 @@ class AMachWeapon : public AActor
 {
 	GENERATED_UCLASS_BODY()
 
-	//////////////////////////////////////////////////////////////////////////
-	// Blueprint Properties
-
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
 	TSubobjectPtr<class USkeletalMeshComponent> Mesh3P;
 
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
 	TSubobjectPtr<class USkeletalMeshComponent> Mesh1P;
 
-	/** Time between two consecutive shots */
+	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
+	TSubclassOf<class AMachProjectile> ProjectileClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
+	FVector MuzzleOffset;
+
+	/** Damage per shot / bullet */
 	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
 	float Damage;
+
+	/** Max ammo per clip */
+	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
+	int32 MaxAmmo;
+
+	/** Total number of clips that can be carried at a time */
+	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
+	int32 AmmoPerClip;
 
 	/** Time between two consecutive shots */
 	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
@@ -79,10 +91,11 @@ class AMachWeapon : public AActor
 	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
 	float Range;
 
-	/** Weapon spread */
+	/** Weapon spread, if greater than 0 will apply a random spread */
 	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
 	float Spread;
 
+	/** This is awkard and weird, we should have animations for each weapon specifically */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = WeaponStat)
 	TEnumAsByte<EWeaponModelType::Type> WeaponModelType;
 
@@ -98,23 +111,26 @@ class AMachWeapon : public AActor
 	void OnEquip();
 	void OnUnequip();
 
-	//////////////////////////////////////////////////////////////////////////
-	// Input
-
 	UFUNCTION()
 	void StartFire();
 
 	UFUNCTION()
 	void StopFire();
-
+	
 	UFUNCTION()
 	void Reload();
 
 protected:
-	EWeaponState::Type CurrentState;
+	UPROPERTY(Transient, Replicated)
+	TEnumAsByte<EWeaponState::Type> CurrentState;
 
 	UPROPERTY(Transient, Replicated)
 	AMachCharacter* OwnerPawn;
+
+	UPROPERTY(Transient, Replicated, BlueprintReadOnly, Category=Gameplay)
+	int32 TotalAmmo;
+	UPROPERTY(Transient, Replicated, BlueprintReadOnly, Category=Gameplay)
+	int32 Ammo;
 
 	uint8 bIsEquipped : 1;
 
@@ -129,11 +145,18 @@ protected:
 	UPROPERTY(Transient, Replicated)
 	FHitResult HitImpact;
 
+	virtual void PostInitializeComponents() override;
+
+	bool CanReload();
+	bool CanFire();
+
 	void OnEquipFinished();
 	void UpdateWeaponState();
 	void SetCurrentState(EWeaponState::Type);
 	void OnBurstStarted();
 	void OnBurstFinished();
+	void OnReloadStarted();
+	void OnReloadFinished();
 	void HandleFiring();
 	FVector GetViewRotation();
 	void GetViewPoint(FVector& start, FRotator& rotation);
@@ -143,8 +166,19 @@ protected:
 	FHitResult WeaponTrace(const FVector& start, const FVector& end) const;
 	void AttachMesh();
 	void DetachMesh();
+	void ConsumeAmmo();
+	void FireProjectile();
 
 	void NotifyHit(const FHitResult& impact, const FVector& origin);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerStartFire();
+	
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerStopFire();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerReload();
 
 	UFUNCTION(reliable, server, WithValidation)
 	void ServerNotifyHit(const FHitResult impact, const FVector origin);
@@ -152,15 +186,6 @@ protected:
 	/** Burst counter, used for replicating fire events to remote clients */
 	UPROPERTY(Transient, ReplicatedUsing=OnRep_BurstCounter)
 	int32 BurstCounter;
-
-	//////////////////////////////////////////////////////////////////////////
-	// Input - Server Side
-
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerStartFire();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerStopFire();
 
 	//////////////////////////////////////////////////////////////////////////
 	// Replication

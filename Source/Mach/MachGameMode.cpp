@@ -151,31 +151,28 @@ void AMachGameMode::Killed(AController* Killer, AController* KilledPlayer, AMach
 	}
 }
 
-APlayerController* AMachGameMode::Login(UPlayer* NewPlayer, const FString& Portal, const FString& Options, const TSharedPtr<FUniqueNetId>& UniqueId, FString& ErrorMessage)
+FString AMachGameMode::InitNewPlayer(APlayerController* NewPlayerController, const TSharedPtr<FUniqueNetId>& UniqueId, const FString& Options, const FString& Portal)
 {
-	ErrorMessage = GameSession->ApproveLogin(Options);
-	if (!ErrorMessage.IsEmpty())
+	check(NewPlayerController);
+
+	FString ErrorMessage;
+
+	// Register the player with the session
+	GameSession->RegisterPlayer(NewPlayerController, UniqueId, HasOption(Options, TEXT("bIsFromInvite")));
+
+	// Init player's name
+	FString InName = ParseOption(Options, TEXT("Name")).Left(20);
+	if (InName.IsEmpty())
 	{
-		return NULL;
+		InName = FString::Printf(TEXT("%s%i"), *DefaultPlayerName, NewPlayerController->PlayerState->PlayerId);
 	}
 
-	APlayerController* NewPlayerController = SpawnPlayerController(FVector::ZeroVector, FRotator::ZeroRotator);
-
-	// Handle spawn failure.
-	if (NewPlayerController == NULL)
-	{
-		UE_LOG(LogTemp, Log, TEXT("Couldn't spawn player controller of class %s"), PlayerControllerClass ? *PlayerControllerClass->GetName() : TEXT("NULL"));
-		ErrorMessage = FString::Printf(TEXT("Failed to spawn player controller"));
-		return NULL;
-	}
-
-	// Customize incoming player based on URL options
-	InitNewPlayer(NewPlayerController, UniqueId, Options);
+	ChangeName(NewPlayerController, InName, false);
 
 	// TODO: Login should talk to the world server to determine what team this player is assigned to
 	// Dummy logic to assign players to teams
 	AMachPlayerState* PlayerState = (AMachPlayerState*)NewPlayerController->PlayerState;
-	if ((NumPlayersTeamA+NumPlayersTeamB) % 2 == 0)
+	if ((NumPlayersTeamA + NumPlayersTeamB) % 2 == 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Adding player to team A"));
 		PlayerState->SetTeam(ETeam::A);
@@ -188,39 +185,22 @@ APlayerController* AMachGameMode::Login(UPlayer* NewPlayer, const FString& Porta
 		NumPlayersTeamB++;
 	}
 
-	// Find a start spot.
+	// Find a starting spot
 	AActor* const StartSpot = FindPlayerStart(NewPlayerController, Portal);
-	if (StartSpot == NULL)
+	if (StartSpot != NULL)
+	{
+		// Set the player controller / camera in this new location
+		FRotator InitialControllerRot = StartSpot->GetActorRotation();
+		InitialControllerRot.Roll = 0.f;
+		NewPlayerController->SetInitialLocationAndRotation(StartSpot->GetActorLocation(), InitialControllerRot);
+		NewPlayerController->StartSpot = StartSpot;
+	}
+	else
 	{
 		ErrorMessage = FString::Printf(TEXT("Failed to find PlayerStart"));
-		return NULL;
 	}
 
-	FRotator InitialControllerRot = StartSpot->GetActorRotation();
-	InitialControllerRot.Roll = 0.f;
-	NewPlayerController->SetInitialLocationAndRotation(StartSpot->GetActorLocation(), InitialControllerRot);
-	NewPlayerController->StartSpot = StartSpot;
-
-	// Register the player with the session
-	GameSession->RegisterPlayer(NewPlayerController, UniqueId, HasOption(Options, TEXT("bIsFromInvite")));
-
-	// Init player's name
-	FString InName = ParseOption(Options, TEXT("Name")).Left(20);
-	if (InName.IsEmpty())
-	{
-		InName = FString::Printf(TEXT("%s%i"), *DefaultPlayerName, NewPlayerController->PlayerState->PlayerId);
-	}
-	ChangeName(NewPlayerController, InName, false);
-
-	// Set up spectating
-	bool bSpectator = FCString::Stricmp(*ParseOption(Options, TEXT("SpectatorOnly")), TEXT("1")) == 0;
-	if (bSpectator || MustSpectate(NewPlayerController))
-	{
-		NewPlayerController->StartSpectatingOnly();
-		return NewPlayerController;
-	}
-
-	return NewPlayerController;
+	return ErrorMessage;
 }
 
 AActor* AMachGameMode::ChoosePlayerStart(AController* Player)

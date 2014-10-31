@@ -8,6 +8,17 @@ class AMachProjectile : public AActor
 {
 	GENERATED_UCLASS_BODY()
 
+	/** initial setup */
+	virtual void PostInitializeComponents() override;
+
+	/** setup velocity */
+	void InitVelocity(FVector& ShootDirection);
+
+	/** handle hit */
+	UFUNCTION()
+	void OnImpact(const FHitResult& HitResult);
+
+protected:
 	/** Sphere collision component */
 	UPROPERTY(VisibleDefaultsOnly, Category=Projectile)
 	TSubobjectPtr<USphereComponent> CollisionComp;
@@ -16,8 +27,6 @@ class AMachProjectile : public AActor
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Movement)
 	TSubobjectPtr<class UProjectileMovementComponent> ProjectileMovement;
 
-	/** called when projectile hits something */
-	UFUNCTION()
-	void OnHit(AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	TWeakObjectPtr<AController> MyController;
 };
 
