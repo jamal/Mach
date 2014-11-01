@@ -10,12 +10,8 @@ AMachProjectile::AMachProjectile(const class FPostConstructInitializeProperties&
 	CollisionComp->AlwaysLoadOnClient = true;
 	CollisionComp->AlwaysLoadOnServer = true;
 	CollisionComp->bTraceComplexOnMove = true;
-	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	CollisionComp->SetCollisionObjectType(COLLISION_PROJECTILE);
-	CollisionComp->SetCollisionResponseToAllChannels(ECR_Ignore);
-	CollisionComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-	CollisionComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
-	CollisionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
+	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AMachProjectile::OnCollisionOverlap);
 	RootComponent = CollisionComp;
 
 	// Use a ProjectileMovementComponent to govern this projectile's movement
@@ -44,11 +40,6 @@ void AMachProjectile::PostInitializeComponents()
 
 	SetLifeSpan(InitialLifeSpan);
 	MyController = GetInstigatorController();
-
-	if (ExplodeTime > 0) {
-		UE_LOG(LogTemp, Warning, TEXT("Starging explosion timer"));
-		GetWorldTimerManager().SetTimer(this, &AMachProjectile::SelfExplode, ExplodeTime, false);
-	}
 }
 
 void AMachProjectile::InitVelocity(FVector& ShootDirection)
@@ -59,30 +50,43 @@ void AMachProjectile::InitVelocity(FVector& ShootDirection)
 	}
 }
 
-void AMachProjectile::OnImpact(const FHitResult& HitResult)
+void AMachProjectile::OnImpact(const FHitResult& ImpactResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("ON IMPACT"));
-	SelfExplode();
-	if (Role == ROLE_Authority && !bExploded) {
-	}
-}
-
-void AMachProjectile::OnProjectileStop(const FHitResult& ImpactResult)
-{
-	UE_LOG(LogTemp, Warning, TEXT("OnProjectileStop"));
-	if (Role == ROLE_Authority) // && !bExploded)
+	if (!bExploded)
 	{
-		//Explode(HitResult);
-		//DisableAndDestroy();
-		Destroy();
+		Explode(ImpactResult);
 	}
 }
 
-void AMachProjectile::SelfExplode()
+void AMachProjectile::OnCollisionOverlap(AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("EXPLOSION"));
+	UE_LOG(LogTemp, Warning, TEXT("OVERLAP"));
+	if (!bInOverlap)
+	{
+		bInOverlap = true;
+
+		FHitResult Hit;
+		if (bFromSweep)
+		{
+			Hit = SweepResult;
+		}
+		else
+		{
+			OtherComp->LineTraceComponent(Hit, GetActorLocation() - GetVelocity() * 10.0, GetActorLocation() + GetVelocity(), FCollisionQueryParams(GetClass()->GetFName(), CollisionComp->bTraceComplexOnMove, this));
+		}
+
+		Explode(Hit);
+	}
+}
+
+void AMachProjectile::Explode(const FHitResult& ImpactResult)
+{
 	if (!bExploded) {
+		const FVector NudgedImpactLocation = ImpactResult.ImpactPoint + ImpactResult.ImpactNormal * 10.0f;
+		UGameplayStatics::ApplyRadialDamage(this, Damage, NudgedImpactLocation, DamageRadius, DamageType, TArray<AActor*>(), this, MyController.Get());
+
 		bExploded = true;
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionFX, GetActorLocation());
+		SetLifeSpan(1.0f);
 	}
 }

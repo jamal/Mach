@@ -4,16 +4,21 @@
 #include "MachProjectile.generated.h"
 
 UCLASS(config=Game)
-class AMachProjectile : public AActor
+class MACH_API AMachProjectile : public AActor
 {
 	GENERATED_UCLASS_BODY()
 
 	UPROPERTY(EditDefaultsOnly, Category = Effects)
 	UParticleSystem* ExplosionFX;
 
-	/** time from spawn before the projectile explodes (grenade style), set to 0 to disable */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Projectile)
-	float ExplodeTime;
+	UPROPERTY(Transient)
+	float Damage;
+
+	UPROPERTY(Transient)
+	float DamageRadius;
+
+	UPROPERTY(Transient)
+	TSubclassOf<class UDamageType> DamageType;
 
 	/** initial setup */
 	virtual void PostInitializeComponents() override;
@@ -28,6 +33,8 @@ class AMachProjectile : public AActor
 protected:
 	UPROPERTY(Transient)
 	uint8 bExploded : 1;
+	UPROPERTY(Transient)
+	uint8 bInOverlap : 1;
 
 	/** Sphere collision component */
 	UPROPERTY(VisibleDefaultsOnly, Category=Projectile)
@@ -38,8 +45,11 @@ protected:
 	TSubobjectPtr<class UProjectileMovementComponent> ProjectileMovement;
 
 	void OnProjectileStop(const FHitResult& ImpactResult);
-	void SelfExplode();
 
+	UFUNCTION()
+	void OnCollisionOverlap(class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
+	UFUNCTION()
+	void Explode(const FHitResult& ImpactResult);
 
 	TWeakObjectPtr<AController> MyController;
 };

@@ -532,7 +532,13 @@ void AMachWeapon::FireProjectile()
 
 	// TODO: This is probably going to work like shit using a remote server
 	if (Role == ROLE_Authority) {
-		GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, Muzzle, AimRot, SpawnParams);
+		AMachProjectile* Projectile = Cast<AMachProjectile>(GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, Muzzle, AimRot, SpawnParams));
+		if (Projectile)
+		{
+			Projectile->Damage = Damage;
+			Projectile->DamageRadius = 1000.0f;
+			Projectile->DamageType = UDamageType::StaticClass();
+		}
 		// Replicate weapon firing
 		BurstCounter++;
 	}
