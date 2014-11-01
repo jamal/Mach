@@ -30,6 +30,9 @@ class MACH_API AMachProjectile : public AActor
 	UFUNCTION()
 	void OnImpact(const FHitResult& HitResult);
 
+	UFUNCTION()
+	void OnCollisionOverlap(class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
+
 protected:
 	UPROPERTY(Transient)
 	uint8 bExploded : 1;
@@ -46,8 +49,6 @@ protected:
 
 	void OnProjectileStop(const FHitResult& ImpactResult);
 
-	UFUNCTION()
-	void OnCollisionOverlap(class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult & SweepResult);
 	UFUNCTION()
 	void Explode(const FHitResult& ImpactResult);
 

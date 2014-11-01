@@ -11,7 +11,6 @@ AMachProjectile::AMachProjectile(const class FPostConstructInitializeProperties&
 	CollisionComp->AlwaysLoadOnServer = true;
 	CollisionComp->bTraceComplexOnMove = true;
 	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
-	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AMachProjectile::OnCollisionOverlap);
 	RootComponent = CollisionComp;
 
 	// Use a ProjectileMovementComponent to govern this projectile's movement
@@ -36,6 +35,7 @@ void AMachProjectile::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	ProjectileMovement->OnProjectileStop.AddDynamic(this, &AMachProjectile::OnImpact);
+	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AMachProjectile::OnCollisionOverlap);
 	CollisionComp->MoveIgnoreActors.Add(Instigator);
 
 	SetLifeSpan(InitialLifeSpan);
@@ -60,7 +60,6 @@ void AMachProjectile::OnImpact(const FHitResult& ImpactResult)
 
 void AMachProjectile::OnCollisionOverlap(AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("OVERLAP"));
 	if (!bInOverlap)
 	{
 		bInOverlap = true;
