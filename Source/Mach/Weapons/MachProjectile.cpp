@@ -30,6 +30,7 @@ AMachProjectile::AMachProjectile(const class FPostConstructInitializeProperties&
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickGroup = TG_PrePhysics;
 	SetRemoteRoleForBackwardsCompat(ROLE_SimulatedProxy);
+	bExploded = false;
 	bReplicates = true;
 	bReplicateInstigator = true;
 	bReplicateMovement = true;
@@ -43,6 +44,11 @@ void AMachProjectile::PostInitializeComponents()
 
 	SetLifeSpan(InitialLifeSpan);
 	MyController = GetInstigatorController();
+
+	if (ExplodeTime > 0) {
+		UE_LOG(LogTemp, Warning, TEXT("Starging explosion timer"));
+		GetWorldTimerManager().SetTimer(this, &AMachProjectile::SelfExplode, ExplodeTime, false);
+	}
 }
 
 void AMachProjectile::InitVelocity(FVector& ShootDirection)
@@ -55,10 +61,28 @@ void AMachProjectile::InitVelocity(FVector& ShootDirection)
 
 void AMachProjectile::OnImpact(const FHitResult& HitResult)
 {
+	UE_LOG(LogTemp, Warning, TEXT("ON IMPACT"));
+	SelfExplode();
+	if (Role == ROLE_Authority && !bExploded) {
+	}
+}
+
+void AMachProjectile::OnProjectileStop(const FHitResult& ImpactResult)
+{
+	UE_LOG(LogTemp, Warning, TEXT("OnProjectileStop"));
 	if (Role == ROLE_Authority) // && !bExploded)
 	{
 		//Explode(HitResult);
 		//DisableAndDestroy();
 		Destroy();
+	}
+}
+
+void AMachProjectile::SelfExplode()
+{
+	UE_LOG(LogTemp, Warning, TEXT("EXPLOSION"));
+	if (!bExploded) {
+		bExploded = true;
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionFX, GetActorLocation());
 	}
 }

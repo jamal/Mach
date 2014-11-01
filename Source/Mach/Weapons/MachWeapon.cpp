@@ -459,9 +459,6 @@ void AMachWeapon::FireWeapon()
 
 	ConsumeAmmo();
 
-	// BurstCounter replicates every time you fire to spawn effects on clients
-	BurstCounter++;
-
 	if (ProjectileClass != NULL) {
 		FireProjectile();
 	}
@@ -533,19 +530,14 @@ void AMachWeapon::FireProjectile()
 	SpawnParams.Owner = Instigator;
 	SpawnParams.Instigator = Instigator;
 
-	if (MuzzleFX)
-	{
-		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
-		if (!bLoopedMuzzleFX || MuzzlePSC == NULL)
-		{
-			MuzzlePSC = UGameplayStatics::SpawnEmitterAttached(MuzzleFX, UseWeaponMesh, MuzzleAttachPoint);
-		}
-	}
-
 	// TODO: This is probably going to work like shit using a remote server
 	if (Role == ROLE_Authority) {
 		GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, Muzzle, AimRot, SpawnParams);
+		// Replicate weapon firing
+		BurstCounter++;
 	}
+
+	SimulateWeaponFiring();
 }
 
 USkeletalMeshComponent* AMachWeapon::GetWeaponMesh() const
@@ -568,7 +560,11 @@ FVector AMachWeapon::GetMuzzleDirection() const
 void AMachWeapon::ProcessHit(const FHitResult& Impact, const FVector& StartTrace, const FVector& EndTrace)
 {
 	// Replicate the impact effect
-	HitImpact = Impact;
+	if (Role == ROLE_Authority)
+	{
+		HitImpact = Impact;
+		BurstCounter++;
+	}
 
 	const FVector EndPoint = Impact.GetActor() ? Impact.ImpactPoint : EndTrace;
 
@@ -595,10 +591,12 @@ void AMachWeapon::ProcessHit(const FHitResult& Impact, const FVector& StartTrace
 	}
 
 	SpawnTrailEffect(EndTrace);
+	SimulateWeaponFiring();
 }
 
 void AMachWeapon::SimulateWeaponFiring()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Simulate weapon firing"));
 	if (MuzzleFX)
 	{
 		USkeletalMeshComponent* UseWeaponMesh = GetWeaponMesh();
