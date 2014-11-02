@@ -91,12 +91,23 @@ protected:
 	UPROPERTY(Transient, Replicated)
 	uint8 bIsUsePressed : 1;
 
-	uint8 bFireIntent : 1;
+	UPROPERTY(BlueprintReadOnly, Transient, Replicated, Category=Animation)
+	uint8 bIsJumpPressed : 1;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Replicated, Category=Animation)
+	uint8 bIsCrouching : 1;
+
+	UPROPERTY(BlueprintReadOnly, Transient, Replicated, Category = Animation)
 	uint8 bIsDying : 1;
+
+	uint8 bFireIntent : 1;
 
 	/** socket or bone name for attaching weapon mesh */
 	UPROPERTY(EditDefaultsOnly, Category = Inventory)
 	FName WeaponAttachPoint;
+
+	void StartJump();
+	void StopJump();
 
 	/** Triggered when the Reload button is pressed */
 	void OnReload();
@@ -121,6 +132,8 @@ protected:
 
 	void OnStartUse();
 	void OnStopUse();
+	void OnCrouchStart();
+	void OnCrouchStop();
 
 	void OnDeath();
 
@@ -141,6 +154,12 @@ protected:
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerOnStopUse();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerOnStartJump();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerOnStopJump();
 
 	//////////////////////////////////////////////////////////////////////////
 	// Replication

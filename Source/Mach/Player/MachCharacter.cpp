@@ -10,6 +10,8 @@ AMachCharacter::AMachCharacter(const class FPostConstructInitializeProperties& P
 	// Set size for collision capsule
 	CapsuleComponent->InitCapsuleSize(42.f, 96.0f);
 	bIsDying = false;
+	Health = 100.0f;
+	Shield = 100.0f;
 
 	if (CharacterMovement)
 	{
@@ -104,7 +106,8 @@ void AMachCharacter::SetupPlayerInputComponent(class UInputComponent* InputCompo
 
 	// TODO: MOve all of this to the player controller
 
-	InputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	InputComponent->BindAction("Jump", IE_Pressed, this, &AMachCharacter::StartJump);
+	InputComponent->BindAction("Jump", IE_Released, this, &AMachCharacter::StopJump);
 
 	InputComponent->BindAction("Fire", IE_Pressed, this, &AMachCharacter::OnStartFire);
 	InputComponent->BindAction("Fire", IE_Released, this, &AMachCharacter::OnStopFire);
@@ -120,6 +123,45 @@ void AMachCharacter::SetupPlayerInputComponent(class UInputComponent* InputCompo
 
 	InputComponent->BindAction("Use", IE_Pressed, this, &AMachCharacter::OnStartUse);
 	InputComponent->BindAction("Use", IE_Released, this, &AMachCharacter::OnStopUse);
+
+	InputComponent->BindAction("Crouch", IE_Pressed, this, &AMachCharacter::OnCrouchStart);
+	InputComponent->BindAction("Crouch", IE_Released, this, &AMachCharacter::OnCrouchStop);
+}
+
+void AMachCharacter::StartJump()
+{
+	if (Role < ROLE_Authority)
+	{
+		ServerOnStartJump();
+	}
+	else
+	{
+		bIsJumpPressed = true;
+	}
+
+	Super::Jump();
+}
+
+void AMachCharacter::StopJump()
+{
+	if (Role < ROLE_Authority)
+	{
+		ServerOnStopJump();
+	}
+	else
+	{
+		bIsJumpPressed = false;
+	}
+}
+
+void AMachCharacter::OnCrouchStart()
+{
+	bIsCrouching = true;
+}
+
+void AMachCharacter::OnCrouchStop()
+{
+	bIsCrouching = false;
 }
 
 void AMachCharacter::OnReload()
@@ -285,6 +327,26 @@ void AMachCharacter::ServerOnStopUse_Implementation()
 	OnStopUse();
 }
 
+bool AMachCharacter::ServerOnStartJump_Validate()
+{
+	return true;
+}
+
+void AMachCharacter::ServerOnStartJump_Implementation()
+{
+	StartJump();
+}
+
+bool AMachCharacter::ServerOnStopJump_Validate()
+{
+	return true;
+}
+
+void AMachCharacter::ServerOnStopJump_Implementation()
+{
+	StopJump();
+}
+
 void AMachCharacter::OnDeath()
 {
 	if (!bIsDying)
@@ -394,6 +456,9 @@ void AMachCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AMachCharacter, bIsUsePressed);
+	DOREPLIFETIME(AMachCharacter, bIsJumpPressed);
+	DOREPLIFETIME(AMachCharacter, bIsDying);
+	DOREPLIFETIME(AMachCharacter, bIsCrouching);
 	DOREPLIFETIME(AMachCharacter, Health);
 	DOREPLIFETIME(AMachCharacter, Shield);
 	DOREPLIFETIME(AMachCharacter, CurrentWeapon);
