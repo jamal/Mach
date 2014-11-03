@@ -26,6 +26,9 @@ class MACH_API AMachProjectile : public AActor
 	/** setup velocity */
 	void InitVelocity(FVector& ShootDirection);
 
+	/** setup velocity */
+	void SetVelocity(FVector& ShootDirection, float Velocity);
+
 	/** handle hit */
 	UFUNCTION()
 	void OnImpact(const FHitResult& HitResult);

@@ -84,6 +84,10 @@ class AMachWeapon : public AActor
 	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
 	float Damage;
 
+	/** Splash damage radius (only for projectiles) */
+	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
+	float DamageRadius;
+
 	/** Max ammo per clip */
 	UPROPERTY(EditDefaultsOnly, Category = WeaponStat)
 	int32 MaxAmmo;
@@ -189,6 +193,9 @@ protected:
 
 	UPROPERTY(Transient, Replicated)
 	FHitResult HitImpact;
+
+	UPROPERTY(Transient)
+	class AMachProjectile* ChargeProjectile;
 
 	virtual void PostInitializeComponents() override;
 

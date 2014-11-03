@@ -50,11 +50,11 @@ class AMachCharacter : public ACharacter
 	UAnimMontage* FireAnimation;
 
 	/** Default weapon is only really used during development -- inventory should be configured differently */
-	UPROPERTY(EditDefaultsOnly, Category = Inventory)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Inventory)
 	TSubclassOf<class AMachWeapon> DefaultPrimaryWeapon;
-	UPROPERTY(EditDefaultsOnly, Category = Inventory)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Inventory)
 	TSubclassOf<class AMachWeapon> DefaultSecondaryWeapon;
-	UPROPERTY(EditDefaultsOnly, Category = Inventory)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Inventory)
 	TSubclassOf<class AMachWeapon> DefaultTertiaryWeapon;
 
 	/** Currently equipped weapon */

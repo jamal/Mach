@@ -50,6 +50,14 @@ void AMachProjectile::InitVelocity(FVector& ShootDirection)
 	}
 }
 
+void AMachProjectile::SetVelocity(FVector& ShootDirection, float Velocity)
+{
+	if (ProjectileMovement)
+	{
+		ProjectileMovement->Velocity = ShootDirection * Velocity;
+	}
+}
+
 void AMachProjectile::OnImpact(const FHitResult& ImpactResult)
 {
 	if (!bExploded)

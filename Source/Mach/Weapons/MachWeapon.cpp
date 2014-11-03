@@ -166,7 +166,7 @@ void AMachWeapon::Reload()
 		ServerReload();
 	}
 
-	if (!bReloadIntent)
+	if (!bReloadIntent && CurrentState != EWeaponState::Reloading)
 	{
 		bReloadIntent = true;
 		UpdateWeaponState();
@@ -208,7 +208,7 @@ void AMachWeapon::UpdateWeaponState()
 		{
 			NewState = EWeaponState::Reloading;
 		}
-		else if (!bReloadIntent && bFireIntent && CanFire())
+		else if (bFireIntent && CanFire())
 		{
 			NewState = EWeaponState::Firing;
 		}
@@ -223,6 +223,31 @@ void AMachWeapon::UpdateWeaponState()
 
 void AMachWeapon::SetCurrentState(EWeaponState::Type NewState)
 {
+	if (NewState == EWeaponState::Firing) 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon State = Firing"));
+	}
+	else if (NewState == EWeaponState::Charging)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon State = Charging"));
+	}
+	else if (NewState == EWeaponState::Equipping)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon State = Equipping"));
+	}
+	else if (NewState == EWeaponState::Idle)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon State = Idle"));
+	}
+	else if (NewState == EWeaponState::Reloading)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon State = Reloading"));
+	}
+	else if (NewState == EWeaponState::Unequipped)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Weapon State = Unequipped"));
+	}
+
 	const EWeaponState::Type PrevState = CurrentState;
 	if (PrevState == EWeaponState::Firing && NewState != EWeaponState::Firing)
 	{
@@ -309,7 +334,29 @@ void AMachWeapon::OnReloadFinished()
 
 void AMachWeapon::HandleFiring()
 {
-	if (BurstMode != EWeaponBurstMode::Charge)
+	if (BurstMode == EWeaponBurstMode::Charge)
+	{
+		if (Role == ROLE_Authority) {
+			FVector AimLoc;
+			FRotator AimRot;
+			GetViewPoint(AimLoc, AimRot);
+
+			FVector Muzzle = GetMuzzleLocation();
+
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = Instigator;
+			SpawnParams.Instigator = Instigator;
+
+			ChargeProjectile = Cast<AMachProjectile>(GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, Muzzle, AimRot, SpawnParams));
+			if (ChargeProjectile)
+			{
+				ChargeProjectile->Damage = Damage;
+				ChargeProjectile->DamageRadius = DamageRadius;
+				ChargeProjectile->DamageType = UDamageType::StaticClass();
+			}
+		}
+	}
+	else
 	{
 		FireWeapon();
 	}
@@ -524,26 +571,34 @@ void AMachWeapon::FireProjectile()
 	FRotator AimRot;
 	GetViewPoint(AimLoc, AimRot);
 
-	FVector Muzzle = GetMuzzleLocation();
-
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = Instigator;
-	SpawnParams.Instigator = Instigator;
-
-	// TODO: This is probably going to work like shit using a remote server
-	if (Role == ROLE_Authority) {
-		AMachProjectile* Projectile = Cast<AMachProjectile>(GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, Muzzle, AimRot, SpawnParams));
-		if (Projectile)
-		{
-			Projectile->Damage = Damage;
-			Projectile->DamageRadius = 1000.0f;
-			Projectile->DamageType = UDamageType::StaticClass();
-		}
-		// Replicate weapon firing
-		BurstCounter++;
+	if (BurstMode == EWeaponBurstMode::Charge && ChargeProjectile != NULL)
+	{
+		// TODO: Don't hard-code the velocity
+		ChargeProjectile->SetVelocity(AimLoc, 10000.0);
 	}
+	else
+	{
+		FVector Muzzle = GetMuzzleLocation();
 
-	SimulateWeaponFiring();
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = Instigator;
+		SpawnParams.Instigator = Instigator;
+
+		// TODO: This is probably going to work like shit using a remote server
+		if (Role == ROLE_Authority) {
+			AMachProjectile* Projectile = Cast<AMachProjectile>(GetWorld()->SpawnActor<AMachProjectile>(ProjectileClass, Muzzle, AimRot, SpawnParams));
+			if (Projectile)
+			{
+				Projectile->Damage = Damage;
+				Projectile->DamageRadius = DamageRadius;
+				Projectile->DamageType = UDamageType::StaticClass();
+			}
+			// Replicate weapon firing
+			BurstCounter++;
+		}
+
+		SimulateWeaponFiring();
+	}
 }
 
 USkeletalMeshComponent* AMachWeapon::GetWeaponMesh() const
