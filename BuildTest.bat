@@ -1,0 +1,1 @@
+RunUAT BuildCookRun -project="%CD%\Moonstorm.uproject" -noP4 -platform=Win64 -clientconfig=Development -serverconfig=Development -compile -server -cook -maps=AllMaps -stage -archive -archivedirectory="%CD%\Out"

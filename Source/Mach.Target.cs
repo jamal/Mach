@@ -8,7 +8,7 @@ public class MachTarget : TargetRules
 	public MachTarget(TargetInfo Target)
 	{
         Type = TargetType.Game;
-        bUsesSteam = true;
+        bUsesSteam = false;
 	}
 
 	//

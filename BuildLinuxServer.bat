@@ -1,0 +1,1 @@
+"C:\UnrealEngine\Engine\Build\BatchFiles\RunUAT" BuildCookRun -project="%CD%\Moonstorm.uproject" -noP4 -platform=Linux -clientconfig=Development -serverconfig=Development -cook -server -serverplatform=Linux -noclient -stage -archive -archivedirectory="%CD%\Out"
